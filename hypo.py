@@ -13,9 +13,11 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spl
 import matplotlib.pyplot  as plt
 
-import h5py
+# import h5py
 
-from utils import nargout
+# import utils_arg as ut
+# from utils import nargout
+
 import cgrid3d
 
 def hypoloc(data, rcv, V, hinit, maxit, convh, verbose=False):
@@ -263,6 +265,15 @@ class Grid3D():
         """
         Return True if at least one point outside grid
         """
+        if (np.min(pts[:,0]) < self.x[0] or np.max(pts[:,0]) > self.x[-1]):
+            print "X", np.min(pts[:,0]) , self.x[0], np.max(pts[:,0]), self.x[-1]
+            
+        if (np.min(pts[:,1]) < self.y[0] or np.max(pts[:,1]) > self.y[-1]):
+            print "Y", np.min(pts[:,1]) , self.y[0], np.max(pts[:,1]), self.y[-1]
+            
+        if (np.min(pts[:,2]) < self.z[0] or np.max(pts[:,2]) > self.z[-1]):
+            print "Z", np.min(pts[:,2]) , self.z[0], np.max(pts[:,2]), self.z[-1]
+        
         return ( np.min(pts[:,0]) < self.x[0] or np.max(pts[:,0]) > self.x[-1] or
                 np.min(pts[:,1]) < self.y[0] or np.max(pts[:,1]) > self.y[-1] or
                 np.min(pts[:,2]) < self.z[0] or np.max(pts[:,2]) > self.z[-1] )
@@ -270,10 +281,9 @@ class Grid3D():
     def set_slowness(self, slowness):
         self.cgrid.set_slowness(slowness)
 
-    def raytrace(self, slowness, hypo, rcv, thread_no=None):
+    def raytrace(self, slowness, hypo, rcv, thread_no=None, nout=1):
 
-        nout = nargout()
-
+#         nout = ut.nargout()
         # check input data consistency
 
         if hypo.ndim != 2 or rcv.ndim != 2:
@@ -402,8 +412,8 @@ class Grid3D():
                 blk_end = blk_start + blk_size[n]
                 p = Process(target=_rt_worker,
                             args=(n, self.cgrid, blk_start, blk_end, vTx, rcv,
-                                  iRx, t0, nout, tt_queue),
-                            daemon=True)
+                                  iRx, t0, nout, tt_queue))
+                            #,daemon=True)
                 processes.append(p)
                 p.start()
                 blk_start += blk_size[n]
@@ -537,53 +547,53 @@ class Grid3D():
 
         return Kx, Ky, Kz
 
-    def toXdmf(self, field, fieldname, filename):
-        """
-        Save a field in xdmf format (http://www.xdmf.org/index.php/Main_Page)
-
-        INPUT
-            field: data array of size equal to the number of cells in the grid
-            fieldname: name to be assinged to the data (string)
-            filename: name of xdmf file (string)
-        """
-        ox = self.x[0]
-        oy = self.y[0]
-        oz = self.z[0]
-        dx = self.x[1] - self.x[0]
-        dy = self.y[1] - self.y[0]
-        dz = self.z[1] - self.z[0]
-        nx = self.x.size
-        ny = self.y.size
-        nz = self.z.size
-
-        f = open(filename+'.xmf','w')
-
-        f.write('<?xml version="1.0" ?>\n')
-        f.write('<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n')
-        f.write('<Xdmf xmlns:xi="http://www.w3.org/2003/XInclude" Version="2.2">\n')
-        f.write(' <Domain>\n')
-        f.write('   <Grid Name="Structured Grid" GridType="Uniform">\n')
-        f.write('     <Topology TopologyType="3DCORECTMesh" NumberOfElements="'+repr(nz)+' '+repr(ny)+' '+repr(nx)+'"/>\n')
-        f.write('     <Geometry GeometryType="ORIGIN_DXDYDZ">\n')
-        f.write('       <DataItem Dimensions="3 " NumberType="Float" Precision="4" Format="XML">\n')
-        f.write('          '+repr(oz)+' '+repr(oy)+' '+repr(ox)+'\n')
-        f.write('       </DataItem>\n')
-        f.write('       <DataItem Dimensions="3 " NumberType="Float" Precision="4" Format="XML">\n')
-        f.write('        '+repr(dz)+' '+repr(dy)+' '+repr(dx)+'\n')
-        f.write('       </DataItem>\n')
-        f.write('     </Geometry>\n')
-        f.write('     <Attribute Name="'+fieldname+'" AttributeType="Scalar" Center="Node">\n')
-        f.write('       <DataItem Dimensions="'+repr(nz)+' '+repr(ny)+' '+repr(nx)+'" NumberType="Float" Precision="4" Format="HDF">'+filename+'.h5:/'+fieldname+'</DataItem>\n')
-        f.write('     </Attribute>\n')
-        f.write('   </Grid>\n')
-        f.write(' </Domain>\n')
-        f.write('</Xdmf>\n')
-
-        f.close()
-
-        h5f = h5py.File(filename+'.h5', 'w')
-        h5f.create_dataset(fieldname, data=field.reshape((nz,ny,nx), order='F').astype(np.float32))
-        h5f.close()
+#     def toXdmf(self, field, fieldname, filename):
+#         """
+#         Save a field in xdmf format (http://www.xdmf.org/index.php/Main_Page)
+# 
+#         INPUT
+#             field: data array of size equal to the number of cells in the grid
+#             fieldname: name to be assinged to the data (string)
+#             filename: name of xdmf file (string)
+#         """
+#         ox = self.x[0]
+#         oy = self.y[0]
+#         oz = self.z[0]
+#         dx = self.x[1] - self.x[0]
+#         dy = self.y[1] - self.y[0]
+#         dz = self.z[1] - self.z[0]
+#         nx = self.x.size
+#         ny = self.y.size
+#         nz = self.z.size
+# 
+#         f = open(filename+'.xmf','w')
+# 
+#         f.write('<?xml version="1.0" ?>\n')
+#         f.write('<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n')
+#         f.write('<Xdmf xmlns:xi="http://www.w3.org/2003/XInclude" Version="2.2">\n')
+#         f.write(' <Domain>\n')
+#         f.write('   <Grid Name="Structured Grid" GridType="Uniform">\n')
+#         f.write('     <Topology TopologyType="3DCORECTMesh" NumberOfElements="'+repr(nz)+' '+repr(ny)+' '+repr(nx)+'"/>\n')
+#         f.write('     <Geometry GeometryType="ORIGIN_DXDYDZ">\n')
+#         f.write('       <DataItem Dimensions="3 " NumberType="Float" Precision="4" Format="XML">\n')
+#         f.write('          '+repr(oz)+' '+repr(oy)+' '+repr(ox)+'\n')
+#         f.write('       </DataItem>\n')
+#         f.write('       <DataItem Dimensions="3 " NumberType="Float" Precision="4" Format="XML">\n')
+#         f.write('        '+repr(dz)+' '+repr(dy)+' '+repr(dx)+'\n')
+#         f.write('       </DataItem>\n')
+#         f.write('     </Geometry>\n')
+#         f.write('     <Attribute Name="'+fieldname+'" AttributeType="Scalar" Center="Node">\n')
+#         f.write('       <DataItem Dimensions="'+repr(nz)+' '+repr(ny)+' '+repr(nx)+'" NumberType="Float" Precision="4" Format="HDF">'+filename+'.h5:/'+fieldname+'</DataItem>\n')
+#         f.write('     </Attribute>\n')
+#         f.write('   </Grid>\n')
+#         f.write(' </Domain>\n')
+#         f.write('</Xdmf>\n')
+# 
+#         f.close()
+# 
+#         h5f = h5py.File(filename+'.h5', 'w')
+#         h5f.create_dataset(fieldname, data=field.reshape((nz,ny,nx), order='F').astype(np.float32))
+#         h5f.close()
 
 class InvParams():
     def __init__(self, maxit, maxit_hypo, conv_hypo, Vlim, dmax, lagrangians,
@@ -602,9 +612,9 @@ class InvParams():
                         dt_max
                         dVs_max
         lagrangians : tuple holding 4 values
-                        λ : weight of smoothing constraint
-                        γ : weight of penalty constraint
-                        α : weight of velocity data point constraint
+                        lam : weight of smoothing constraint
+                        gamma : weight of penalty constraint
+                        alpha : weight of velocity data point constraint
                         wzK   : weight for vertical smoothing (w.r. to horizontal smoothing)
         invert_vel  : perform velocity inversion if True (True by default)
         invert_VsVp : find Vs/Vp ratio rather that Vs (True by default)
@@ -633,9 +643,9 @@ class InvParams():
         self.dt_max = dmax[2]
         if len(dmax) > 3:
             self.dVs_max = dmax[3]
-        self.λ = lagrangians[0]
-        self.γ = lagrangians[1]
-        self.α = lagrangians[2]
+        self.lam = lagrangians[0]
+        self.gamma = lagrangians[1]
+        self.alpha = lagrangians[2]
         self.wzK   = lagrangians[3]
         self.invert_vel = invert_vel
         self.invert_VsVp = invert_VsVp
@@ -841,12 +851,12 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
                     indr = np.nonzero(data[:,0] == evID[ne])[0]
                     for i in indr:
                         hyp[i,:] = hyp0[indh[0],:]
-                tcalc, rays, v0, Mev = grid.raytrace(s, hyp, rcv_data)
+                tcalc, rays, v0, Mev = grid.raytrace(s, hyp, rcv_data,nout=4)
             else:
                 tcalc = np.array([])
 
             if ncal > 0:
-                tcalc_cal, _, _, Mcal = grid.raytrace(s, hcal, rcv_cal)
+                tcalc_cal, _, _, Mcal = grid.raytrace(s, hcal, rcv_cal,nout=4)
             else:
                 tcalc_cal = np.array([])
 
@@ -859,9 +869,12 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
                 plt.figure(1)
                 plt.cla()
                 plt.plot(r1a,'o')
-                plt.title('Residuals - Iteration {0:d}'.format(it+1))
-                plt.show(block=False)
-                plt.pause(0.0001)
+                figname='Residuals - Iteration {0:d}'.format(it+1)
+                plt.title(figname)
+                plt.savefig(figname+"png") 
+                plt.close()
+#                 plt.show(block=False)
+#                 plt.pause(0.0001)
 
             resV[it] = np.linalg.norm(np.hstack((r1a, r1)))
             r1 = np.matrix( r1.reshape(-1,1) )
@@ -938,18 +951,18 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
             A = M1.T * M1
             nM = spl.norm(A)
 
-            λ = par.λ * nM / nK
+            lam = par.lam * nM / nK
 
-            A += λ*KtK
+            A += lam*KtK
 
             tmp = dP1.T * dP1
             nP = spl.norm(tmp)
             if nP != 0.0:
-                γ = par.γ * nM / nP
+                gamma = par.gamma * nM / nP
             else:
-                γ = par.γ
+                gamma = par.gamma
 
-            A += γ*tmp
+            A += gamma*tmp
             A += u1 * u1.T
 
             b = M1.T * r1
@@ -958,14 +971,14 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
             tmp2z = Kz1.T * cz
             tmp3 = dP1.T * P
             tmp = u1 * s
-            b += - λ*tmp2x - λ*tmp2y - par.wzK*λ*tmp2z - γ*tmp3 - tmp
+            b += - lam*tmp2x - lam*tmp2y - par.wzK*lam*tmp2z - gamma*tmp3 - tmp
 
             if Vpts.shape[0] > 0:
                 tmp = D1.T * D1
                 nD = spl.norm(tmp)
-                α = par.α * nM / nD
-                A += α * tmp
-                b += α * D1.T * (Vpts[:,0].reshape(-1,1) - D*V )
+                alpha = par.alpha * nM / nD
+                A += alpha * tmp
+                b += alpha * D1.T * (Vpts[:,0].reshape(-1,1) - D*V )
 
             if par.verbose:
                 print('                  calling minres with system of size {0:d} x {1:d}'.format(A.shape[0], A.shape[1]))
@@ -1011,8 +1024,8 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
                 for n in range(grid.nthreads):
                     blk_end = blk_start + blk_size[n]
                     p = Process(target=_rl_worker,
-                                args=(n, blk_start, blk_end, par, grid, evID, hyp0, data, rcv, tobs, h_queue),
-                                daemon=True)
+                                args=(n, blk_start, blk_end, par, grid, evID, hyp0, data, rcv, tobs, h_queue))
+                                #,daemon=True)
                     processes.append(p)
                     p.start()
                     blk_start += blk_size[n]
@@ -1032,12 +1045,12 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
                 indr = np.nonzero(data[:,0] == evID[ne])[0]
                 for i in indr:
                     hyp[i,:] = hyp0[indh[0],:]
-            tcalc = grid.raytrace(s, hyp, rcv_data)
+            tcalc = grid.raytrace(s, hyp, rcv_data,nout=1)
         else:
             tcalc = np.array([])
 
         if ncal > 0:
-            tcalc_cal = grid.raytrace(s, hcal, rcv_cal)
+            tcalc_cal = grid.raytrace(s, hcal, rcv_cal,nout=1)
         else:
             tcalc_cal = np.array([])
 
@@ -1050,9 +1063,13 @@ def jointHypoVel(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpts=
             plt.figure(1)
             plt.cla()
             plt.plot(r1a,'o')
-            plt.title('Residuals - Final step')
-            plt.show(block=False)
-            plt.pause(0.0001)
+            figname='Residuals - Final step'
+            plt.title(figname)
+            plt.savefig(figname+"png") 
+            plt.close()
+#             plt.title('Residuals - Final step')
+#             plt.show(block=False)
+#             plt.pause(0.0001)
 
         resV[-1] = np.linalg.norm(np.hstack((r1a, r1)))
 
@@ -1091,14 +1108,15 @@ def _reloc(ne, par, grid, evID, hyp0, data, rcv, tobs, thread_no=None):
 
     if par.hypo_2step:
         if par.verbose:
-            print('                  Updating latitude & longitude', end='')
+#             print('                  Updating latitude & longitude', end='')
+            print('                  Updating latitude & longitude')
             sys.stdout.flush()
         H = np.ones((nst,2))
         for itt in range(par.maxit_hypo):
             for i in range(nst):
                 hyp[i,:] = hyp0[indh,:]
 
-            tcalc, rays, v0 = grid.raytrace(None, hyp, stn, thread_no)
+            tcalc, rays, v0 = grid.raytrace(None, hyp, stn, thread_no=thread_no,nout=3)
             for ns in range(nst):
                 raysi = rays[ns]
                 V0 = v0[ns]
@@ -1147,7 +1165,8 @@ def _reloc(ne, par, grid, evID, hyp0, data, rcv, tobs, thread_no=None):
                 sys.stdout.flush()
 
     if par.verbose:
-        print('                  Updating all hypocenter params', end='')
+#         print('                  Updating all hypocenter params', end='')
+        print('                  Updating all hypocenter params')
         sys.stdout.flush()
 
     H = np.ones((nst,4))
@@ -1155,7 +1174,7 @@ def _reloc(ne, par, grid, evID, hyp0, data, rcv, tobs, thread_no=None):
         for i in range(nst):
             hyp[i,:] = hyp0[indh,:]
 
-        tcalc, rays, v0 = grid.raytrace(None, hyp, stn, thread_no)
+        tcalc, rays, v0 = grid.raytrace(None, hyp, stn, thread_no=thread_no,nout=3)
         for ns in range(nst):
             raysi = rays[ns]
             V0 = v0[ns]
@@ -1394,7 +1413,7 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
             u1 = sp.csr_matrix(np.zeros(2*nnodes+2*nsta).reshape(-1,1))
 
         if Vpts.size > 0:
-
+        
             if par.verbose:
                 print('Building velocity data point matrix D')
                 sys.stdout.flush()
@@ -1428,6 +1447,7 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
             D1 = sp.hstack((D, sp.csr_matrix((Vpts2.shape[0],2*nsta)))).tocsr()
         else:
             D = 0.0
+            Vpts2 = Vpts
 
         if par.verbose:
             print('Building regularization matrix K')
@@ -1503,13 +1523,15 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                         P[n,0] = 0.0
                         dP[n,n] = 0.0
 
-            if par.verbose:
-                npel = np.sum( P[:nnodes,0] != 0.0 )
-                if npel > 0:
-                    print('                  P-wave penalties applied at {0:d} nodes'.format(npel))
-                npel = np.sum( P[nnodes:2*nnodes,0] != 0.0 )
-                if npel > 0:
-                    print('                  S-wave penalties applied at {0:d} nodes'.format(npel))
+#             if par.verbose:
+#                 npel = np.sum( P[:nnodes,0] != 0.0 )
+#                 npel=(P[:nnodes,0] != 0.0 ).sum
+#                 if npel > 0:
+#                     print('                  P-wave penalties applied at {0:d} nodes'.format(npel))
+# #                 npel = np.sum( P[nnodes:2*nnodes,0] != 0.0 )
+#                 npel=(P[nnodes:2*nnodes,0] != 0.0 ).sum
+#                 if npel > 0:
+#                     print('                  S-wave penalties applied at {0:d} nodes'.format(npel))
 
 
             if par.verbose:
@@ -1524,7 +1546,7 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                     for i in indrp:
                         hyp[i,:] = hyp0[indh[0],:]
 
-                tcalcp, raysp, v0p, Mevp = grid.raytrace(s_p, hyp, rcv_datap)
+                tcalcp, raysp, v0p, Mevp = grid.raytrace(s_p, hyp, rcv_datap,nout=4)
 
                 hyp = np.empty((ntts,5))
                 for ne in np.arange(nev):
@@ -1532,7 +1554,7 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                     indrs = np.nonzero(np.logical_and(data[:,0] == evID[ne], inds))[0]
                     for i in indrs:
                         hyp[i-nttp,:] = hyp0[indh[0],:]
-                tcalcs, rayss, v0s, Mevs = grid_s.raytrace(s_s, hyp, rcv_datas)
+                tcalcs, rayss, v0s, Mevs = grid_s.raytrace(s_s, hyp, rcv_datas,nout=4)
 
                 tcalc = np.hstack((tcalcp, tcalcs))
                 v0 = np.hstack((v0p, v0s))
@@ -1579,9 +1601,9 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                 tcalc = np.array([])
 
             if ncal > 0:
-                tcalcp_cal, _, _, Mp_cal = grid.raytrace(s_p, hcalp, rcv_calp)
+                tcalcp_cal, _, _, Mp_cal = grid.raytrace(s_p, hcalp, rcv_calp,nout=4)
                 if nttcals > 0:
-                    tcalcs_cal, _, _, Ms_cal = grid_s.raytrace(s_s, hcals, rcv_cals)
+                    tcalcs_cal, _, _, Ms_cal = grid_s.raytrace(s_s, hcals, rcv_cals,nout=4)
                     tcalc_cal = np.hstack((tcalcp_cal, tcalcs_cal))
                 else:
                     tcalc_cal = tcalcp_cal
@@ -1602,9 +1624,13 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                 plt.figure(1)
                 plt.cla()
                 plt.plot(r1a,'o')
-                plt.title('Residuals - Iteration {0:d}'.format(it+1))
-                plt.show(block=False)
-                plt.pause(0.0001)
+                figname='Residuals - Iteration {0:d}'.format(it+1)
+                plt.title(figname)
+                plt.savefig(figname+".png") 
+                plt.close()
+#                 plt.title('Residuals - Iteration {0:d}'.format(it+1))
+#                 plt.show(block=False)
+#                 plt.pause(0.0001)
 
             # initializing matrix M; matrix of partial derivatives of velocity dt/dV
             if par.verbose:
@@ -1689,18 +1715,18 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
             A = M1.T * M1
 
             nM = spl.norm(A)
-            λ = par.λ * nM / nK
+            lam = par.lam * nM / nK
 
-            A += λ*KtK
+            A += lam*KtK
 
             tmp = dP1.T * dP1
             nP = spl.norm(tmp)
             if nP != 0.0:
-                γ = par.γ * nM / nP
+                gamma = par.gamma * nM / nP
             else:
-                γ = par.γ
+                gamma = par.gamma
 
-            A += γ*tmp
+            A += gamma*tmp
             A += u1 * u1.T
 
             b = M1.T * r1
@@ -1709,14 +1735,14 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
             tmp2z = Kz1.T * cz
             tmp3 = dP1.T * P
             tmp = u1 * s
-            b += -λ*tmp2x - λ*tmp2y - par.wzK*λ*tmp2z - γ*tmp3 - tmp
+            b += -lam*tmp2x - lam*tmp2y - par.wzK*lam*tmp2z - gamma*tmp3 - tmp
 
             if Vpts2.shape[0] > 0:
                 tmp = D1.T * D1
                 nD = spl.norm(tmp)
-                α = par.α * nM / nD
-                A += α * tmp
-                b += α * D1.T * (Vpts2[:,0].reshape(-1,1) - D*V )
+                alpha = par.alpha * nM / nD
+                A += alpha * tmp
+                b += alpha * D1.T * (Vpts2[:,0].reshape(-1,1) - D*V )
 
             if par.verbose:
                 print('                  calling minres with system of size {0:d} x {1:d}'.format(A.shape[0], A.shape[1]))
@@ -1744,18 +1770,65 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                 Vs = np.multiply( VsVp, Vp )
             else:
                 Vs = V[nnodes:2*nnodes]
+#             if (par.show_plots):
+#                 V3d = V[0].reshape(grid.shape)
+#   
+#                 plt.figure(figsize=(10,8))
+#                 plt.subplot(221)
+#                 plt.pcolor(x,z,np.squeeze(V3d[:,9,:].T), cmap='CMRmap',), plt.gca().invert_yaxis()
+#                 plt.xlabel('X')
+#                 plt.ylabel('Z')
+#                 plt.colorbar()
+#                 plt.subplot(222)
+#                 plt.pcolor(y,z,np.squeeze(V3d[8,:,:].T), cmap='CMRmap'), plt.gca().invert_yaxis()
+#                 plt.xlabel('Y')
+#                 plt.ylabel('Z')
+#                 plt.colorbar()
+#                 plt.subplot(223)
+#                 plt.pcolor(x,y,np.squeeze(V3d[:,:,4].T), cmap='CMRmap')
+#                 plt.xlabel('X')
+#                 plt.ylabel('Y')
+#                 plt.colorbar()
+#                 plt.suptitle('V_p')
+#                 figname='Vp - Iteration {0:d}'.format(it+1)   
+#                 plt.savefig(figname+".png") 
+#                 plt.close()
+#                   
+#                   
+#                 V3d = V[1].reshape(grid.shape)
+#                   
+#                 plt.figure(figsize=(10,8))
+#                 plt.subplot(221)
+#                 plt.pcolor(x,z,np.squeeze(V3d[:,9,:].T), cmap='CMRmap',), plt.gca().invert_yaxis()
+#                 plt.xlabel('X')
+#                 plt.ylabel('Z')
+#                 plt.colorbar()
+#                 plt.subplot(222)
+#                 plt.pcolor(y,z,np.squeeze(V3d[8,:,:].T), cmap='CMRmap'), plt.gca().invert_yaxis()
+#                 plt.xlabel('Y')
+#                 plt.ylabel('Z')
+#                 plt.colorbar()
+#                 plt.subplot(223)
+#                 plt.pcolor(x,y,np.squeeze(V3d[:,:,4].T), cmap='CMRmap')
+#                 plt.xlabel('X')
+#                 plt.ylabel('Y')
+#                 plt.colorbar()
+#                 plt.suptitle('V_s')
+#                 figname='Vs - Iteration {0:d}'.format(it+1)   
+#                 plt.savefig(figname+".png") 
+#                 plt.close()    
             s_p = 1./Vp
             s_s = 1./Vs
             sc_p += deltam[2*nnodes:2*nnodes+nsta,0].getA1()
             sc_s += deltam[2*nnodes+nsta:,0].getA1()
 
-            if par.save_V:
-                if par.verbose:
-                    print('                Saving Velocity models')
-                grid.toXdmf(Vp.getA(), 'Vp', 'Vp{0:02d}'.format(it+1))
-                if par.invert_VsVp:
-                    grid.toXdmf(VsVp.getA(), 'VsVp', 'VsVp{0:02d}'.format(it+1))
-                grid.toXdmf(Vs.getA(), 'Vs', 'Vs{0:02d}'.format(it+1))
+#             if par.save_V:
+#                 if par.verbose:
+#                     print('                Saving Velocity models')
+#                 grid.toXdmf(Vp.getA(), 'Vp', 'Vp{0:02d}'.format(it+1))
+#                 if par.invert_VsVp:
+#                     grid.toXdmf(VsVp.getA(), 'VsVp', 'VsVp{0:02d}'.format(it+1))
+#                 grid.toXdmf(Vs.getA(), 'Vs', 'Vs{0:02d}'.format(it+1))
 
         if nev > 0:
             if par.verbose:
@@ -1782,8 +1855,8 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                     blk_end = blk_start + blk_size[n]
                     p = Process(target=_rlPS_worker,
                                 args=(n, blk_start, blk_end, par, (grid, grid_s), evID, hyp0,
-                                      data, rcv, tobs, (s_p, s_s), (indp, inds), h_queue),
-                                daemon=True)
+                                      data, rcv, tobs, (s_p, s_s), (indp, inds), h_queue))
+                                #, daemon=True)
                     processes.append(p)
                     p.start()
                     blk_start += blk_size[n]
@@ -1801,7 +1874,7 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                 for i in indrp:
                     hyp[i,:] = hyp0[indh[0],:]
 
-            tcalcp = grid.raytrace(s_p, hyp, rcv_datap)
+            tcalcp = grid.raytrace(s_p, hyp, rcv_datap,nout=1)
 
             hyp = np.empty((ntts,5))
             for ne in np.arange(nev):
@@ -1809,15 +1882,15 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
                 indrs = np.nonzero(np.logical_and(data[:,0] == evID[ne], inds))[0]
                 for i in indrs:
                     hyp[i-nttp,:] = hyp0[indh[0],:]
-            tcalcs = grid_s.raytrace(s_s, hyp, rcv_datas)
+            tcalcs = grid_s.raytrace(s_s, hyp, rcv_datas,nout=1)
 
             tcalc = np.hstack((tcalcp, tcalcs))
         else:
             tcalc = np.array([])
 
         if ncal > 0:
-            tcalcp_cal = grid.raytrace(s_p, hcalp, rcv_calp)
-            tcalcs_cal = grid_s.raytrace(s_s, hcals, rcv_cals)
+            tcalcp_cal = grid.raytrace(s_p, hcalp, rcv_calp,nout=1)
+            tcalcs_cal = grid_s.raytrace(s_s, hcals, rcv_cals,nout=1)
             tcalc_cal = np.hstack((tcalcp_cal, tcalcs_cal))
         else:
             tcalc_cal = np.array([])
@@ -1831,9 +1904,13 @@ def jointHypoVelPS(par, grid, data, rcv, Vinit, hinit, caldata=np.array([]), Vpt
             plt.figure(1)
             plt.cla()
             plt.plot(r1a,'o')
-            plt.title('Residuals - Final step')
-            plt.show(block=False)
-            plt.pause(0.0001)
+            figname='Residuals - Final step'
+            plt.title(figname)
+            plt.savefig(figname)
+            plt.close()
+#             plt.title('Residuals - Final step')
+#             plt.show(block=False)
+#             plt.pause(0.0001)
 
         r1 = np.matrix( r1.reshape(-1,1) )
         r1a = np.matrix( r1a.reshape(-1,1) )
@@ -1882,16 +1959,17 @@ def _relocPS(ne, par, grid, evID, hyp0, data, rcv, tobs, s, ind, thread_no=None)
 
     if par.hypo_2step:
         if par.verbose:
-            print('                  Updating latitude & longitude', end='')
+#             print('                  Updating latitude & longitude', end='')
+            print('                  Updating latitude & longitude')
             sys.stdout.flush()
         H = np.ones((nstp+nsts,2))
         for itt in range(par.maxit_hypo):
             for i in range(nstp):
                 hypp[i,:] = hyp0[indh,:]
-            tcalcp, raysp, v0p = grid_p.raytrace(s_p, hypp, stnp, thread_no)
+            tcalcp, raysp, v0p = grid_p.raytrace(s_p, hypp, stnp, thread_no=thread_no,nout=3)
             for i in range(nsts):
                 hyps[i,:] = hyp0[indh,:]
-            tcalcs, rayss, v0s = grid_s.raytrace(s_s, hyps, stns, thread_no)
+            tcalcs, rayss, v0s = grid_s.raytrace(s_s, hyps, stns, thread_no=thread_no,nout=3)
             for ns in range(nstp):
                 raysi = raysp[ns]
                 V0 = v0p[ns]
@@ -1910,7 +1988,6 @@ def _relocPS(ne, par, grid, evID, hyp0, data, rcv, tobs, s, ind, thread_no=None)
                 H[ns+nstp,1] = -1./V0 * d[1]/ds
 
             r = np.hstack((tobs[indrp] - tcalcp, tobs[indrs] - tcalcs))
-
             x = np.linalg.lstsq(H,r,rcond=None)
             deltah = x[0]
 
@@ -1949,17 +2026,18 @@ def _relocPS(ne, par, grid, evID, hyp0, data, rcv, tobs, s, ind, thread_no=None)
                 sys.stdout.flush()
 
     if par.verbose:
-        print('                  Updating all hypocenter params', end='')
+#         print('                  Updating all hypocenter params', end='')
+        print('                  Updating all hypocenter params')
         sys.stdout.flush()
 
     H = np.ones((nstp+nsts,4))
     for itt in range(par.maxit_hypo):
         for i in range(nstp):
             hypp[i,:] = hyp0[indh,:]
-        tcalcp, raysp, v0p = grid_p.raytrace(s_p, hypp, stnp, thread_no)
+        tcalcp, raysp, v0p = grid_p.raytrace(s_p, hypp, stnp, thread_no=thread_no,nout=3)
         for i in range(nsts):
             hyps[i,:] = hyp0[indh,:]
-        tcalcs, rayss, v0s = grid_s.raytrace(s_s, hyps, stns, thread_no)
+        tcalcs, rayss, v0s = grid_s.raytrace(s_s, hyps, stns, thread_no=thread_no,nout=3)
         for ns in range(nstp):
             raysi = raysp[ns]
             V0 = v0p[ns]
@@ -1980,7 +2058,7 @@ def _relocPS(ne, par, grid, evID, hyp0, data, rcv, tobs, s, ind, thread_no=None)
             H[ns+nstp,3] = -1./V0 * d[2]/ds
 
         r = np.hstack((tobs[indrp] - tcalcp, tobs[indrs] - tcalcs))
-        x = np.linalg.lstsq(H,r,rcond=None)
+        x = np.linalg.lstsq(H,r,rcond=-1)
         deltah = x[0]
 
         if np.sum( np.isfinite(deltah) ) != deltah.size:
@@ -2036,7 +2114,7 @@ if __name__ == '__main__':
     y = np.arange(ymin, ymax, dx)
     z = np.arange(zmin, zmax, dx)
 
-    nthreads = 4
+    nthreads = 1
     g = Grid3D(x, y, z, nthreads)
 
     testK = False
@@ -2205,7 +2283,7 @@ if __name__ == '__main__':
         rcv_data = np.kron(np.ones((nev,1)), rcv)
         ircv_data = np.kron(np.ones((nev,1)), ircv)
 
-        tt = g.raytrace(slowness, src, rcv_data)
+        tt = g.raytrace(slowness, src, rcv_data,nout=1)
 
         Vpts = np.array([[Vz(0.001), 0.100, 0.100, 0.001, 0.0],
                          [Vz(0.001), 0.100, 0.200, 0.001, 0.0],
@@ -2239,7 +2317,7 @@ if __name__ == '__main__':
         rcv_cal = rcv_cal[ind,:]
         ircv_cal = ircv_cal[ind,:]
 
-        tcal = g.raytrace(slowness, src_cal, rcv_cal)
+        tcal = g.raytrace(slowness, src_cal, rcv_cal,nout=1)
         caldata = np.column_stack((src_cal[:,0], tcal, ircv_cal, src_cal[:,2:], np.zeros(tcal.shape)))
 
         Vpmin = 3.5
@@ -2256,11 +2334,11 @@ if __name__ == '__main__':
         dVs_max = 0.1
         dmax = (dVp_max, dx_max, dt_max, dVs_max)
 
-        λ = 2.
-        γ = 1.
-        α = 1.
+        lam = 2.
+        gamma = 1.
+        alpha = 1.
         wzK = 0.1
-        lagran = (λ, γ, α, wzK)
+        lagran = (lam, gamma, alpha, wzK)
 
         if addNoise:
             noise_variance = 1.e-3;  # 1 ms
@@ -2272,9 +2350,9 @@ if __name__ == '__main__':
 
     if testParallel:
 
-        tt = g.raytrace(slowness, src, rcv_data)
-        tt, rays, v0 = g.raytrace(slowness, src, rcv_data)
-        tt, rays, v0, M = g.raytrace(slowness, src, rcv_data)
+        tt = g.raytrace(slowness, src, rcv_data,nout=1)
+        tt, rays, v0 = g.raytrace(slowness, src, rcv_data,nout=3)
+        tt, rays, v0, M = g.raytrace(slowness, src, rcv_data,nout=4)
 
 
 
@@ -2364,7 +2442,7 @@ if __name__ == '__main__':
 
         slowness_s = 1./Vs + np.zeros(g.getNumberOfNodes())
 
-        tt_s = g.raytrace(slowness_s, src, rcv_data)
+        tt_s = g.raytrace(slowness_s, src, rcv_data,nout=1)
 
         tt += noise_variance*np.random.randn(tt.size)
         tt_s += noise_variance*np.random.randn(tt_s.size)
@@ -2381,7 +2459,7 @@ if __name__ == '__main__':
         data = np.vstack((data_p, data_s))
 
 
-        tcal_s = g.raytrace(slowness_s, src_cal, rcv_cal)
+        tcal_s = g.raytrace(slowness_s, src_cal, rcv_cal,nout=1)
         caldata_s = np.column_stack((src_cal[:,0], tcal_s, ircv_cal, src_cal[:,2:], np.ones(tcal_s.shape)))
         caldata = np.vstack((caldata, caldata_s))
         
